@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 
 def start():
     msg_from = '790801144@qq.com'  # 发送方邮箱
-    passwd = 'xxx'  # 就是上面的授权码
+    passwd = "arvxmcmyhujqbfjj"  # 就是上面的授权码
 
     to = ['790801144@qq.com']  # 接受方邮箱
 

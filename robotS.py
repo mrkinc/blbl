@@ -1,14 +1,71 @@
+import json
+import os.path
+import smtplib
 import sys
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import markdown
 import requests
-
+import toml
 
 
 class blbl():
     def __init__(self):
+        config = toml.load("config.toml")
         self.session = requests.Session()
-        self.cookie = "buvid3=28EC906E-BCF7-DA0A-2217-427C64F1D68124073infoc; i-wanna-go-back=-1; _uuid=C7E1054110-510D1-A35A-10DC8-FC1061B2A93D423172infoc; FEED_LIVE_VERSION=V8; nostalgia_conf=-1; CURRENT_FNVAL=4048; rpdid=|(u|Jll)~RR~0J'uY)Y|YJkYR; b_nut=1686063263; buvid_fp_plain=undefined; header_theme_version=CLOSE; DedeUserID=213248764; DedeUserID__ckMd5=5afb3c021bafa4cf; b_ut=5; LIVE_BUVID=AUTO8016943597833299; hit-dyn-v2=1; SESSDATA=e53b53ae%2C1711871995%2C5eca2%2Aa2CjBfgWtljVNYOw4D38A6gpC6WAoU38rYSI5CM2CeDROxjmSEQmJGY90DTZ2z7c9qSVMSVnFraGVhQ0ptTkpWM0pSUFFLTVpUMGI3TGNLYlhzN1BNcnZaZ3lVaGFjbEtzTHlJT1U1bDhCTHZtVE5UTHhTdTNJc0dUc09QaEg1UncwLVhMa2tMdGxBIIEC; bili_jct=08b6496b0ff3af1bcc3a769b3b7643b3; buvid4=16489DBE-67DB-38C1-570B-EF6C50828EE925517-023060622-EHDpG6f5%2FKRXYLw0zqkkkw%3D%3D; CURRENT_QUALITY=80; enable_web_push=DISABLE; fingerprint=f7af7a462f7ff4b0f28fe1692b067bc4; bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTc2MDk5NjgsImlhdCI6MTY5NzM1MDcwOCwicGx0IjotMX0.okxLNnxO5SPh5qDiIFjVgjGsWavXyoY4sLkmP-wc9x4; bili_ticket_expires=1697609908; PVID=1; bp_video_offset_213248764=853010415172452354; innersign=0; home_feed_column=4; bsource=search_google; buvid_fp=38d0f5720413c72b6ce6e4fe674dfb23; sid=7985huql; browser_resolution=864-770; b_lsid=FD35B10EC_18B3B95455A"
+        self.cookie = config["global"]["cookie"]
+        self.UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0"
+        self.mail = config["global"]["mail"]
+        self.token = config["global"]["token"]
 
-    def _requests(self,method, url, decode_level=2,  retry=10, timeout=15, **kwargs):
+    def sendEmail(self,Subject, data):
+        flag = True
+        tar = []
+        for i in data:
+            if data[i]:
+                tar.append(i)
+                flag = False
+        if flag:
+            return False
+
+        mail = self.mail  # 发送方邮箱
+        passwd = self.token  # 的授权码
+
+        msg = MIMEMultipart()
+        md_content = ""
+        for i in tar:
+            md_content += f"# {i}\n"
+            for j in data[i]:
+                md_content += f"- {j[0]} 价格: {j[1]}\n"
+
+        # md_content = """
+        #    # This is a title
+        #
+        #    - Item1
+        #    - Item2
+        #    - Item3
+        #    - Item4
+        #    - Item5
+        #    """
+        # 把内容加进去
+        content = markdown.markdown(md_content)
+        msg.attach(MIMEText(content, 'html', 'utf-8'))
+
+        # 设置邮件主题
+        msg['Subject'] = Subject
+
+        # 发送方信息
+        msg['From'] = mail
+
+        # 通过SSL方式发送，服务器地址和端口
+        s = smtplib.SMTP_SSL("smtp.qq.com", 465)
+        # 登录邮箱
+        s.login(mail , passwd)
+        # 开始发送
+        s.sendmail(mail , mail , msg.as_string())
+        print("邮件发送成功")
+
+    def _requests(self, method, url, decode_level=2, retry=10, timeout=15, **kwargs):
         if method in ["get", "post"]:
             for _ in range(retry + 1):
                 response = getattr(self.session, method)(url, timeout=timeout, **kwargs)
@@ -27,7 +84,62 @@ class blbl():
             print("Cookie已失效")
             return False
 
+    def VipPurchase(self,allId):
+        url = "https://mall.bilibili.com/mall/noah/search/category/v2"
+        headers = {'Host': "mall.bilibili.com",
+                   'User-Agent': self.UA
+                   }
+        res = {}
+        for name, _id in allId.items():
+            postData = {
+                "keyword": "",
+                "filters": "",
+                "priceFlow": "",
+                "priceCeil": "",
+                "sortType": "totalrank",
+                "sortOrder": "",
+                "pageIndex": 1,
+                "userId": "",
+                "state": "",
+                "scene": "",
+                "termQueries": [{"field": "ip", "values": [_id]}],
+                "rangeQueries": [],
+                "extra": []
+            }
+            res[name] = []
+            if os.path.exists("savedData.json"):
+                with open('savedData.json', 'r') as f:
+                    savedData = json.load(f)
+                    if name not in savedData:
+                        savedData[name] = []
+            else:
+                savedData = {}
+                savedData[name] = []
+
+            for _ in range(1,20):
+                postData["pageIndex"] = _
+                response = self._requests("post", url,json=postData ,headers=headers)
+                data = response["data"]["list"]
+                flag = True
+                for i in data:
+                    if (i["itemsType"] == 1 or i["itemsType"] == 2) and (i["itemsId"] not in savedData[name]):
+                        flag = False
+                        res[name].append([i["name"],i["price"]])
+                        savedData[name].append(i["itemsId"])
+                if flag and _ not in [1,2]:
+                    break
+
+            with open('savedData.json', 'w') as f:
+                json.dump(savedData, f)
+
+        self.sendEmail("会员购",res)
+
 
 if __name__ == '__main__':
     tar = blbl()
-    tar.TestCookie()
+    # tar.TestCookie()
+    dic = {
+        "lyc" : "0_3101837",
+        "eva" : "0_3000035"
+    }
+    tar.VipPurchase(dic) # ly
