@@ -1,7 +1,6 @@
 import json
 import os.path
 import smtplib
-import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import markdown
@@ -26,6 +25,7 @@ class blbl():
                 tar.append(i)
                 flag = False
         if flag:
+            print("邮件无需发送")
             return False
 
         mail = self.mail  # 发送方邮箱
@@ -64,6 +64,7 @@ class blbl():
         # 开始发送
         s.sendmail(mail , mail , msg.as_string())
         print("邮件发送成功")
+        return True
 
     def _requests(self, method, url, decode_level=2, retry=10, timeout=15, **kwargs):
         if method in ["get", "post"]:
