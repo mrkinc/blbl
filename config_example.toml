@@ -1,0 +1,5 @@
+# 全局设置
+[global]
+cookie = "" # Cookie
+mail = ""   # 邮箱
+token = ""  # 邮箱的smtp口令
