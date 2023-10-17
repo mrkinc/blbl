@@ -3,3 +3,4 @@ config.toml
 venv/
 dist/
 output/
+build/
