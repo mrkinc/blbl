@@ -50,18 +50,10 @@ class blbl():
         # 把内容加进去
         content = markdown.markdown(md_content)
         msg.attach(MIMEText(content, 'html', 'utf-8'))
-
-        # 设置邮件主题
         msg['Subject'] = Subject
-
-        # 发送方信息
         msg['From'] = mail
-
-        # 通过SSL方式发送，服务器地址和端口
         s = smtplib.SMTP_SSL("smtp.qq.com", 465)
-        # 登录邮箱
         s.login(mail , passwd)
-        # 开始发送
         s.sendmail(mail , mail , msg.as_string())
         print("邮件发送成功")
         return True
