@@ -5,6 +5,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from io import BytesIO
 
 import markdown
@@ -52,9 +53,9 @@ class blbl():
         msg = MIMEMultipart()
         md_content = ""
         for i in tar:
-            md_content += f"# {i}\n"
+            md_content += f"<h1> {i}<h1>\n<ul>"
             for j in data[i]:
-                md_content += f"- {j[0]} 价格: {j[1]}\n"
+                md_content += f"<li> {j[0]} 价格: {j[1]}</li>\n"
                 image_data = self.getImage(j[2])
                 image_id = j[3]
                 # 作为附件添加图片
@@ -65,13 +66,14 @@ class blbl():
                 image_mime.add_header('Content-Disposition', 'inline', filename=f"{image_id}.jpg")
                 msg.attach(image_mime)
                 # 在HTML正文中引用图片
-                md_content += f'<img src="cid:{image_id}" alt="Image"/><br/>'
+                md_content += f'<img src="cid:{image_id}" alt="Image" height="300"/><br/>'
+            md_content += "</ul>\n"
 
         content = markdown.markdown(md_content)
 
         msg.attach(MIMEText(content, 'html', 'utf-8'))
         msg['Subject'] = Subject
-        msg['From'] = mail
+        msg['from'] = formataddr(('kinc', mail))
         s = smtplib.SMTP_SSL("smtp.qq.com", 465)
         s.login(mail , passwd)
         s.sendmail(mail , mail , msg.as_string())
