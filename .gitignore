@@ -6,3 +6,5 @@ output/
 build/
 test.py
 del.py
+
+.DS_Store
