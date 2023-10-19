@@ -1,16 +1,11 @@
-import json
+import json,smtplib,toml,requests
 import os.path
-import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
 from io import BytesIO
-
-import markdown
-import requests
-import toml
 from PIL import Image
 
 
@@ -23,7 +18,7 @@ class blbl():
         self.mail = config["global"]["mail"]
         self.token = config["global"]["token"]
 
-    def getImage(self, url):
+    def getImage(self, url):  # @EP: 获得URL对应的图片
         res = requests.get(url)
         if res.status_code == 200:
             buffer = BytesIO()
@@ -31,10 +26,8 @@ class blbl():
             img = img.convert('RGB')
             img.save(buffer, format="JPEG", quality=60)
             return buffer.getvalue()
-
         else:
             print("请求失败，状态码：", res.status_code)
-
 
     def sendEmail(self,Subject, data):
         flag = True
@@ -48,14 +41,14 @@ class blbl():
             return False
 
         mail = self.mail  # 发送方邮箱
-        passwd = self.token  # 的授权码
+        passwd = self.token  # 发送方的授权码
 
         msg = MIMEMultipart()
-        md_content = ""
+        content = ""
         for i in tar:
-            md_content += f"<h1> {i}<h1>\n<ul>"
+            content += f"<h1>{i}<h1>\n<ul>"
             for j in data[i]:
-                md_content += f"<li> {j[0]} 价格: {j[1]}</li>\n"
+                content += f"<li> {j[0]} 价格: {j[1]}</li>\n"
                 image_data = self.getImage(j[2])
                 image_id = j[3]
                 # 作为附件添加图片
@@ -66,10 +59,8 @@ class blbl():
                 image_mime.add_header('Content-Disposition', 'inline', filename=f"{image_id}.jpg")
                 msg.attach(image_mime)
                 # 在HTML正文中引用图片
-                md_content += f'<img src="cid:{image_id}" alt="Image" height="300"/><br/>'
-            md_content += "</ul>\n"
-
-        content = markdown.markdown(md_content)
+                content += f'<img src="cid:{image_id}" alt="Image" height="300"/><br/>'
+            content += "</ul>\n"
 
         msg.attach(MIMEText(content, 'html', 'utf-8'))
         msg['Subject'] = Subject
@@ -153,8 +144,8 @@ class blbl():
 if __name__ == '__main__':
     tar = blbl()
     # tar.TestCookie()
-    dic = {
+    dic = {  # @EP: 希望显示的名字 ： IP的值
         "lyc" : "0_3101837",
         "eva" : "0_3000035"
     }
-    tar.VipPurchase(dic) # ly
+    tar.VipPurchase(dic)
