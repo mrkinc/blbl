@@ -4,3 +4,5 @@ venv/
 dist/
 output/
 build/
+test.py
+del.py

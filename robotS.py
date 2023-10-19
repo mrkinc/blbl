@@ -1,11 +1,16 @@
 import json
 import os.path
 import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from io import BytesIO
+
 import markdown
 import requests
 import toml
+from PIL import Image
 
 
 class blbl():
@@ -16,6 +21,19 @@ class blbl():
         self.UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0"
         self.mail = config["global"]["mail"]
         self.token = config["global"]["token"]
+
+    def getImage(self, url):
+        res = requests.get(url)
+        if res.status_code == 200:
+            buffer = BytesIO()
+            img = Image.open(BytesIO(res.content))
+            img = img.convert('RGB')
+            img.save(buffer, format="JPEG", quality=60)
+            return buffer.getvalue()
+
+        else:
+            print("请求失败，状态码：", res.status_code)
+
 
     def sendEmail(self,Subject, data):
         flag = True
@@ -37,18 +55,20 @@ class blbl():
             md_content += f"# {i}\n"
             for j in data[i]:
                 md_content += f"- {j[0]} 价格: {j[1]}\n"
+                image_data = self.getImage(j[2])
+                image_id = j[3]
+                # 作为附件添加图片
+                image_mime = MIMEBase('image', 'jpeg')
+                image_mime.set_payload(image_data)
+                encoders.encode_base64(image_mime)
+                image_mime.add_header('Content-ID', f'<{image_id}>')
+                image_mime.add_header('Content-Disposition', 'inline', filename=f"{image_id}.jpg")
+                msg.attach(image_mime)
+                # 在HTML正文中引用图片
+                md_content += f'<img src="cid:{image_id}" alt="Image"/><br/>'
 
-        # md_content = """
-        #    # This is a title
-        #
-        #    - Item1
-        #    - Item2
-        #    - Item3
-        #    - Item4
-        #    - Item5
-        #    """
-        # 把内容加进去
         content = markdown.markdown(md_content)
+
         msg.attach(MIMEText(content, 'html', 'utf-8'))
         msg['Subject'] = Subject
         msg['From'] = mail
@@ -117,7 +137,7 @@ class blbl():
                 for i in data:
                     if (i["itemsType"] == 1 or i["itemsType"] == 2) and (i["itemsId"] not in savedData[name]):
                         flag = False
-                        res[name].append([i["name"],i["price"]])
+                        res[name].append([i["name"],i["price"],i["itemsImg"],i["itemsId"]])
                         savedData[name].append(i["itemsId"])
                 if flag and _ not in [1,2]:
                     break
