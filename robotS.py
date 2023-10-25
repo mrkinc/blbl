@@ -146,6 +146,7 @@ if __name__ == '__main__':
     # tar.TestCookie()
     dic = {  # @EP: 希望显示的名字 ： IP的值
         "lyc" : "0_3101837",
-        "eva" : "0_3000035"
+        "eva" : "0_3000035",
+        "DemonSlayer" : "0_3000294"
     }
     tar.VipPurchase(dic)
